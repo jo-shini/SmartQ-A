@@ -13,6 +13,7 @@ Implements Retrieval-Augmented Generation (RAG) with:
 ## ⚙️ Setup
  
 ```bash
-git clone <repo>
-cd project
+git clone https://github.com/jo-shini/SmartQ-A.git
+cd SmartQ-A
 npm install
+node server.js

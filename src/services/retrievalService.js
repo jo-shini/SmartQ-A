@@ -1,17 +1,27 @@
 const Document = require('../models/Document');
-const { getEmbedding } = require('./embeddingService');
 
-exports.findRelavantDocs = async (question) => {
-    const queryEmbedding = await getEmbedding(question)
+exports.findRelevantDocs = async (question) => {
+    const words = question.toLowerCase().split(" ");
 
     const docs = await Document.find();
 
-    const scored = await Promise.all(
-        docs.map(async (doc) => {
-            const docEmbedding = await getEmbedding(doc.content);
-            const score = consineSimilarity(queryEmbedding, docEmbedding);
-            return { doc, score };
-        }))
+    const scored = docs.map(doc => {
+        const content = doc.content.toLowerCase();
+        const title = doc.title.toLowerCase();
+        const tags = doc.tags.join(" ").toLowerCase();
 
-    return scored.sort((a, b) => b.score - a.score).slice(0, 3);
-}
+        let score = 0;
+
+        words.forEach(word => {
+            if (content.includes(word)) score += 1;
+            if (title.includes(word)) score += 2;  
+            if (tags.includes(word)) score += 3;  
+        });
+
+        return { doc, score };
+    });
+
+    return scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+};

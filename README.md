@@ -1,0 +1,18 @@
+# Smart Q&A API (RAG System)
+ 
+## 🚀 Overview
+Backend API using Node.js + Express + MongoDB + LLM (Groq)
+ 
+Implements Retrieval-Augmented Generation (RAG) with:
+- Document retrieval
+- Context grounding
+- Structured LLM response
+ 
+---
+ 
+## ⚙️ Setup
+ 
+```bash
+git clone <repo>
+cd project
+npm install

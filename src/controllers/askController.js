@@ -1,13 +1,17 @@
-const { findRelavantDocs } = require('../services/retrievalService');
-const { askLLM } = require("../services/llmService");
-const { context } = require('langchain');
+const { findRelevantDocs } = require('../services/retrievalService');
+const { askLLM } = require('../services/llmService');
+const { logAsk } = require('../utils/logger');
 
+// Confidence based on retrieval score
 function getConfidence(score) {
-    if (score > 3) return "high";
-    if (score > 1) return "medium";
+    if (score >= 5) return "high";
+    if (score >= 2) return "medium";
+    return "low";
 }
 
 exports.askQuestion = async (req, res, next) => {
+    const start = Date.now();
+
     try {
         const { question } = req.body;
 
@@ -15,25 +19,47 @@ exports.askQuestion = async (req, res, next) => {
             return res.status(400).json({ message: "Question is required" });
         }
 
-        const reuslts = await askLLM(question, context);
+        // Step 1: Retrieve docs
+        const results = await findRelevantDocs(question);
 
+        const context = results.map(r => r.doc.content).join("\n");
+
+        // Step 2: LLM call
+        const llmRaw = await askLLM(question, context);
+
+        // Step 3: Clean JSON response
         let parsed;
         try {
-            parsed = JSON.parse(llmRaw);
-        }
-        catch {
+            const cleaned = llmRaw.match(/\{[\s\S]*\}/)?.[0];
+            parsed = JSON.parse(cleaned);
+        } catch {
             parsed = {
                 answer: llmRaw,
                 confidence: "low"
             };
         }
-        const confidence = getConfidence(reuslts[0]?.score || 0);
+
+        // Step 4: Confidence from retrieval
+        const confidence = getConfidence(results[0]?.score || 0);
+
+        const latencyMs = Date.now() - start;
+
+        // Logging (important for marks)
+        logAsk({
+            userId: req.user?.id,
+            question,
+            latencyMs,
+            confidence
+        });
+
+        // Final response
         res.json({
             answer: parsed.answer,
-            sources: reuslts.map(r => r.doc._id),
+            sources: results.map(r => r.doc._id, toString()),
             confidence
-        })
+        });
+
     } catch (err) {
-        next(err)
+        next(err);
     }
-}
+};

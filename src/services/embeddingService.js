@@ -1,9 +1,24 @@
-const { OpenAIEmbeddings } = require("@langchain/openai");
+const { pipeline } = require('@xenova/transformers');
 
-const embeddings = new OpenAIEmbeddings({
-    apiKey: process.env.OPENAI_API_KEY
-});
+let extractor;
+
+async function loadModel() {
+    if (!extractor) {
+        extractor = await pipeline(
+            'feature-extraction',
+            'Xenova/all-MiniLM-L6-v2'
+        );
+    }
+    return extractor;
+}
 
 exports.getEmbedding = async (text) => {
-    return await embeddings.embedQuery(text);
-}
+    const model = await loadModel();
+
+    const output = await model(text, {
+        pooling: 'mean',
+        normalize: true
+    });
+
+    return Array.from(output.data);
+};
